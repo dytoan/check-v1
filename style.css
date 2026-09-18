@@ -77,3 +77,23 @@ h2 {
 .hidden {
     display: none;
 }
+
+.admin-link {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #00ff41;
+}
+
+.admin-link a {
+    color: #00ff41;
+    font-size: 12px;
+    opacity: 0.5;
+    text-decoration: none;
+    letter-spacing: 2px;
+}
+
+.admin-link a:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
